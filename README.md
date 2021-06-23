@@ -7,13 +7,22 @@ retrieve their results.
 
 ## Executable build
 
-Clone this repository
+Clone this repository:
 
-```
-git clone 
+```sh
+$ git clone https://github.com/guillaumecherel/openmole-automate.git
 ```
 
-Assemble the jar file with sbt
+Create the executable jar file with sbt:
+
+```sh
+$ sbt assembly
+```
+
+The executable is available at `target/scala-3.0.0/openmole-automate`. To use
+it, run it from the root of your simulation experiment project and run it (see
+below).
+
 
 
 
