@@ -1,0 +1,31 @@
+// Define the variables that are transmitted between the tasks
+val mySeed = Val[Long]
+val pi = Val[Double]
+
+val piAvg = Val[Double]
+val piMed = Val[Double]
+
+// Define the model task that computes an estimation of pi
+val model =
+  ScalaTask("""
+    |val random = newRNG(mySeed)
+    |val points = 10000
+    |val inside =
+    |  for {
+    |    i <- (0 until points).toIterator
+    |    x = random.nextDouble()
+    |    y = random.nextDouble()
+    |  } yield { (x * x) + (y * y) }
+    |val pi = (inside.count(_ < 1).toDouble / points) * 4
+    |""".stripMargin) set (
+      inputs += mySeed,
+      outputs += pi
+    )
+
+Replication(
+  evaluation = model,
+  seed = mySeed,
+  sample = 100,
+  aggregation = Seq(pi aggregate average as piAvg, pi aggregate median as piMed)
+) hook display hook (workDirectory / "output/result.json", format = JSONOutputFormat())
+

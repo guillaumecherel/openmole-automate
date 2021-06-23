@@ -1,0 +1,9 @@
+[Job]
+root = "job/"
+script = "pi.oms"
+output = "output/"
+
+[OpenMole]
+address = "localhost"
+port = "8080"
+
