@@ -1,5 +1,5 @@
 import omautom._
-import omautom.openmoleapi._
+import omautom._
 import org.scalatest._
 import org.scalatest.EitherValues.convertEitherToValuable
 import org.scalatest.flatspec._

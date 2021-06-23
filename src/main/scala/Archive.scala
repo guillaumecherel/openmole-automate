@@ -95,7 +95,6 @@ object Archive:
         .mapError(thrown => Error.InvalidFilePath(
           s"$targetDir/${entry.getName()}", Error.Thrown(thrown)))
 
-      _ <- ZIO.debug(s"!!!DEBUG!!! $entryAbsPath")
       entryIsDir <- ZIO.effect(entry.isDirectory())
         .mapError(Error.Thrown.apply)
 

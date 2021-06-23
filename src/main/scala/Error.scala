@@ -1,7 +1,7 @@
 package omautom
 
 import omautom.util._
-import omautom.openmoleapi._
+import omautom._
 import java.io.IOException
 import java.nio.file.Path
 import scala.collection.immutable.List

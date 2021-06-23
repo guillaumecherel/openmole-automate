@@ -1,4 +1,4 @@
-package omautom.openmoleapi
+package omautom
 
 import omautom.util
 import zio._

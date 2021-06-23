@@ -1,4 +1,4 @@
-package omautom.openmoleapi
+package omautom
 
 enum JobStatus:
   case Running(ready: Int, running: Int, completed: Int, environments: String)

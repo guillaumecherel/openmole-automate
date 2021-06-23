@@ -1,78 +1,12 @@
-package omautom.openmoleapi
+package omautom
 
 import com.fasterxml.jackson.databind._
-import omautom.Error
-import omautom.util.Archive
-import omautom.util.pathFromString
 import java.nio.file.{Path, Paths, Files}
+import omautom._
+import omautom.util._
 import sttp.client3._
 import sttp.client3.httpclient.zio.HttpClientZioBackend
 import zio._
-
-
-
-opaque type JobId = String
-
-object JobId:
-  def apply(str: String): JobId = str
-
-
-
-final case class OpenMoleInstance(
-    address: String,
-    port: String)
-
-
-
-extension (om: OpenMoleInstance)
-  def url: String = s"http://${om.address}:${om.port}"
-
-
-
-object OpenMoleInstance:
-
-  def sendJob(job: Job):
-    ZIO[(OpenMoleInstance, SttpBackend[Task, _]), Error, JobId] =
-    for
-      archivePath <- ZIO.effect(Files.createTempFile("openmole-job", ".tar.gz"))
-        .mapError(thrown => Error.ArchiveFileCreationError(thrown))
-      archive <- Archive.pack(archivePath, job.workingDir)
-      jobId <- ZIO.accessM[(OpenMoleInstance, SttpBackend[Task, _])](
-        (om, _) => sendRequest(Request.postJob(om, archive, job.workingDir.resolve(job.scriptPath))))
-    yield
-      jobId
-
-  def getJobStatus(jobId: JobId):
-    ZIO[(OpenMoleInstance, SttpBackend[Task, _]), Error, JobStatus] =
-    ZIO.accessM[(OpenMoleInstance, SttpBackend[Task, _])](
-      (om, _) => sendRequest(Request.getJobStatus(om, jobId)))
-
-  def getJobResult(jobId: JobId, job: Job):
-    ZIO[(OpenMoleInstance, SttpBackend[Task, _]), Error, JobResult] =
-    for
-      archivePath <- ZIO.accessM[(OpenMoleInstance, SttpBackend[Task, _])](
-        (om, _) => sendRequest(Request.getJobResult(om, jobId, job.outputDir)))
-      ar <- Archive.fromArchiveFile(archivePath)
-      _ <- Archive.unpack(ar, job.outputDir)
-    yield
-      JobResult(ar)
-
-  def sendRequest[T](request: Request[Either[Error, T], Any]):
-    ZIO[(OpenMoleInstance, SttpBackend[Task, _]), Error, T]=
-    ZIO.accessM[(OpenMoleInstance, SttpBackend[Task, _])](
-      (om, sttp) => request.send(sttp))
-    //.debug(s"!!!DEBUG!!! HTTP REQUEST: ${request.toString}\n!!!DEBUG!!! HTTP RESPONSE: ")
-    .catchAll(_ match 
-        case e: SttpClientException.ConnectException => 
-          ZIO.accessM[(OpenMoleInstance, SttpBackend[Task, _])]((om, _) => 
-            ZIO.fail(Error.HttpConnectionError(om, e)))
-        case e: SttpClientException.ReadException => 
-          ZIO.accessM[(OpenMoleInstance, SttpBackend[Task, _])]((om, _) => 
-            ZIO.fail(Error.HttpReadError(om, e))))
-    .map(response => response.body)
-    .absolve
-
-
 
 object Request:
 
@@ -80,6 +14,18 @@ object Request:
   //fonctions ci-dessous y ait accès sans effet de bord. Ça implique qu'elles
   //renvoient un ZIO.
   val objectMapper = ObjectMapper()
+
+  def send[T](om: OpenMoleInstance, request: Request[Either[Error, T], Any]):
+    ZIO[SttpBackend[Task, _], Error, T]=
+    ZIO.accessM[SttpBackend[Task, _]](sttp => request.send(sttp))
+    .catchAll(_ match 
+      case e: SttpClientException.ConnectException => 
+        ZIO.fail(Error.HttpConnectionError(om, e))
+      case e: SttpClientException.ReadException => 
+        ZIO.fail(Error.HttpReadError(om, e)))
+    .map(response => response.body)
+    .absolve
+
 
   def postJob(om: OpenMoleInstance, jobArchive: Archive, scriptPath: Path):
     Request[Either[Error, JobId], Any] =

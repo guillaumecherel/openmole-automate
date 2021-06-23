@@ -2,7 +2,7 @@ package omautom
 
 import java.io.IOException
 import java.nio.file.{Files, Path, Paths}
-import omautom.openmoleapi._
+import omautom._
 import omautom.util
 import toml.Toml
 import toml.Value

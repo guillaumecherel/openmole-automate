@@ -1,8 +1,11 @@
 package omautom
 
-import omautom.openmoleapi._
+import java.nio.file.{Path, Paths, Files}
+import omautom._
+import omautom.util._
 import sttp.client3.httpclient.zio.HttpClientZioBackend
 import sttp.client3.SttpBackend
+import sttp.client3._
 import zio._
 import zio.duration._
 
@@ -16,27 +19,46 @@ final case class Env(
     clock: zio.clock.Clock)
 
 object Env:
-    def sendOpenMoleJob(job: Job): ZIO[Env, Error, JobId] =
-        ZIO.accessM[Env](env => OpenMoleInstance.sendJob(job)
-            .provideSome[Env](env => (env.om, env.httpBackend)))
 
-    def logJobStatusUntilDone(job: JobId, sleep: Duration): ZIO[Env, Error, JobStatus] =
-      val doSleep = ZIO.accessM[Env](env => ZIO.sleep(sleep).provide(env.clock))
-      (logJobStatusOnce(job) <* doSleep).repeatUntil(_.isDone)
+  def sendOpenMoleJob(job: Job): ZIO[Env, Error, JobId] =
+    for 
+      archive <- job.pack
+      jobId <- ZIO.accessM[Env](env =>
+        Request.send(
+          env.om,
+          Request.postJob(env.om, archive,
+            job.workingDir.resolve(job.scriptPath)))
+        .provide(env.httpBackend))
+    yield
+      jobId
 
-    def logJobStatusOnce(jobId: JobId): ZIO[Env, Error, JobStatus] =
-        for
-          status <- ZIO.accessM[Env](env => OpenMoleInstance.getJobStatus(jobId)
-            .provide((env.om, env.httpBackend)))
-          _ <- ZIO.accessM[Env](env => Logger.logMsg(
-            s"Job ${jobId.toString}, ${status.toMessage}")
-            .provide(env.logger))
-        yield
-            status
+  def logJobStatusUntilDone(job: JobId, sleep: Duration): ZIO[Env, Error, JobStatus] =
+    val doSleep = ZIO.accessM[Env](env => ZIO.sleep(sleep).provide(env.clock))
+    (logJobStatusOnce(job) <* doSleep).repeatUntil(_.isDone)
 
-    def getJobResult(jobId: JobId, job: Job): ZIO[Env, Error, JobResult] =
-      ZIO.accessM[Env](env => OpenMoleInstance.getJobResult(jobId, job)
-        .provide((env.om, env.httpBackend)))
+  def logJobStatusOnce(jobId: JobId): ZIO[Env, Error, JobStatus] =
+      for
+        status <- getJobStatus(jobId)
+        _ <- ZIO.accessM[Env](env => Logger.logMsg(
+          s"Job ${jobId.toString}, ${status.toMessage}")
+          .provide(env.logger))
+      yield
+          status
 
-    def storeJobResult(job: Job, result: JobResult): ZIO[Env, Error, Unit] =
-        ResultDatabase.storeJobResult(job, result)
+  def getJobStatus(jobId: JobId): ZIO[Env, Error, JobStatus] =
+    ZIO.accessM[Env](env => 
+      Request.send(env.om, Request.getJobStatus(env.om, jobId))
+      .provide(env.httpBackend))
+
+  def getJobResult(jobId: JobId, job: Job): ZIO[Env, Error, JobResult] =
+    for
+      archivePath <- ZIO.accessM[Env]( env =>
+        Request.send(
+          env.om,
+          Request.getJobResult(env.om, jobId, job.outputDir))
+        .provide(env.httpBackend))
+      ar <- Archive.fromArchiveFile(archivePath)
+      _ <- Archive.unpack(ar, job.outputDir)
+    yield
+      JobResult(ar)
+
