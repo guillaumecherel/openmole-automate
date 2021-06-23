@@ -9,7 +9,7 @@ lazy val app = project
     version := "0.1.0",
 
     // assembly / mainClass := Some("omautom.openmoleAutomate"),
-    assembly / assemblyJarName := "openmole-automate.jar",
+    assembly / assemblyJarName := "openmole-automate",
     assembly / assemblyMergeStrategy := {
       case "module-info.class" => MergeStrategy.concat
       case PathList("org", "reactivestreams", xs @ _*) => MergeStrategy.last
