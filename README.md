@@ -72,24 +72,44 @@ address = "localhost"
 port = "8080"
 ```
 
-Run the OpenMOLE Automate executable with
+Move to the directory `example-experiment/` and run the OpenMOLE Automate 
+executable:
 
 ```
-openmole-automate
+../target/scala-3.0.0/openmole-automate
 ```
 
-It will pack the 
+It will pack the folder `job/`, send it to the OpenMOLE instance at
+`localhost:8080`, log the job status until it's done and download the results
+to `output/`.
 
-# [[EgiAuthentication]]
-# certificate = "path/to/cert.p12"
-# vo = "vo.complex-systems.eu"
 
-# [[SshAuthentication]]
-# hostname = "host1"
-# login = "user1"
-# password = "pass1"
 
-# [[SshAuthentication]]
-# hostname = "host2"
-# login = "user2"
-# password = "pass2"
+
+## Authentication
+
+Not implemented yet.
+
+Add this to `.openmole-automate.toml`
+
+```
+[[EgiAuthentication]]
+certificate = "path/to/cert.p12"
+vo = "vo.complex-systems.eu"
+
+[[SshAuthentication]]
+hostname = "host1"
+login = "user1"
+password = "pass1"
+
+[[SshAuthentication]]
+hostname = "host2"
+login = "user2"
+password = "pass2"
+```
+
+
+
+## Plugins
+
+Not implemented yet.
