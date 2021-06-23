@@ -1,7 +1,7 @@
 # OpenMOLE Automate
 
 OpenMOLE Automate helps you interact with an OpenMOLE instance programmatically.
-It offers both an executable and a Scala API to send your simulation experiments
+It offers both an executable to send your simulation experiments
 contained in a local folder to a running OpenMOLE instance, log their status and
 retrieve their results.
 
