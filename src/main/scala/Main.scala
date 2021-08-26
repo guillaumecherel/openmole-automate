@@ -10,8 +10,9 @@ import zio.duration._
 import scala.collection.View.Empty
 
 val defaultOptionsPath: String = ".openmole-automate.toml"
+val statusRefreshRate: Duration = 1.second
 
-@main def openmoleAutomate: Unit =
+@main def openmoleAutomate(args: String*): Unit =
 
     def env(opts: Options): ZIO[Has[Clock.Service] & Has[Blocking.Service] & Has[Console.Service], Error, Env] =
       for
@@ -31,14 +32,16 @@ val defaultOptionsPath: String = ".openmole-automate.toml"
     def logic(opts: Options): ZIO[Env, Error, Unit] =
       for
         jobId <- Env.sendOpenMoleJob(opts.job)
-        _ <- Env.logJobStatusUntilDone(jobId, 100.millisecond)
+        _ <- Env.logJobStatusUntilDone(jobId, statusRefreshRate)
         jobResult <- Env.getJobResult(jobId, opts.job)
       yield
         ()
 
     def main: ZIO[Has[Clock.Service] & Has[Blocking.Service] & Has[Console.Service], RuntimeException, Unit] = 
       for
-        opts <- Options.fromFilePathString(defaultOptionsPath)
+        optsPath <- ZIO.succeed(Option.when(args.length > 0)(args(0))
+            .getOrElse(defaultOptionsPath))
+        opts <- Options.fromFilePathString(optsPath)
           .mapError(e => RuntimeException(e.msg))
         env <- env(opts)
           .mapError(e => RuntimeException(e.msg))
